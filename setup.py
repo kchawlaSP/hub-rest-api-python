@@ -14,7 +14,7 @@ from setuptools import find_packages, setup, Command
 # Package meta-data.
 NAME = 'blackduck'
 DESCRIPTION = 'Package for using the Synopsys Black Duck Hub REST API.'
-URL = 'https://github.com/blackducksoftware/hub-rest-api-python'
+URL = 'https://github.com/kchawlaSP/hub-rest-api-python'
 EMAIL = 'gsnyder@synopsys.com'
 AUTHOR = 'Glenn Snyder'
 REQUIRES_PYTHON = '>=3.6.0'
