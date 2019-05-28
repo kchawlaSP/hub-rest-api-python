@@ -49,6 +49,7 @@ It is possible to generate generate_config file by initalizing API as following:
 import logging
 import requests
 import json
+logger = logging.getLogger(__name__)
 
 # TODO: Create some kind of Black Duck exception grouping/hierarchy?
 
@@ -211,7 +212,7 @@ class HubInstance(object):
                 if 'rel' in link_obj and link_obj['rel'] == link_name:
                     return link_obj.get('href', None)
         else:
-            logging.debug("This does not appear to be a BD REST object. It should have ['_meta']['links']")
+            logger.debug("This does not appear to be a BD REST object. It should have ['_meta']['links']")
 
     def get_limit_paramstring(self, limit):
         return "?limit={}".format(limit)
@@ -265,7 +266,7 @@ class HubInstance(object):
             # A hack to get the assignment to work on v3
             role_url = role_url.replace("api", "api/internal")
         data = {"name": role_name, "role": role_url}
-        logging.debug("executing POST to {} with {}".format(
+        logger.debug("executing POST to {} with {}".format(
             user_or_group_role_assignment_url, data))
         return self.execute_post(user_or_group_role_assignment_url, data = data)
 
@@ -485,10 +486,10 @@ class HubInstance(object):
         else:
             query = "?q=bdsuite:{}&limit=9999".format(protex_component_id)
         with_query = url + query
-        logging.debug("Finding the Hub componet for Protex component id {}, release id {} using query/url {}".format(
+        logger.debug("Finding the Hub componet for Protex component id {}, release id {} using query/url {}".format(
             protex_component_id, protex_component_release_id, with_query))
         response = self.execute_get(with_query)
-        logging.debug("query results in status code {}, json data: {}".format(response.status_code, response.json()))
+        logger.debug("query results in status code {}, json data: {}".format(response.status_code, response.json()))
         # TODO: Error checking and retry? For now, as POC just assuming it worked
         component_list_d = response.json()
         if component_list_d['totalCount'] >= 1:
@@ -506,12 +507,12 @@ class HubInstance(object):
             vulnerable_bom_components = response.json()
             return vulnerable_bom_components
         else:
-            logging.warning("Failed to retrieve vulnerable bom components for project {}, status code {}".format(
+            logger.warning("Failed to retrieve vulnerable bom components for project {}, status code {}".format(
                 version_obj, response.status_code))
 
     def get_component_remediation(self, bom_component):
         url = "{}/remediating".format(bom_component['componentVersion'])
-        logging.debug("Url for getting remediation info is : {}".format(url))
+        logger.debug("Url for getting remediation info is : {}".format(url))
         response = self.execute_get(url)
         return response.json()
 
@@ -563,7 +564,7 @@ class HubInstance(object):
         if 'license' in license_obj:
             license_info = {}
             text_json = {}
-            logging.debug("license: {}".format(license_obj))
+            logger.debug("license: {}".format(license_obj))
             response = self.execute_get(license_obj['license'])
             if response.status_code == 200:
                 license_info = response.json()
@@ -580,7 +581,7 @@ class HubInstance(object):
     def get_license_info_for_bom_component(self, bom_component, limit=1000):
         self._check_version_compatibility()
         all_licenses = {}
-        logging.debug("gathering license info for bom component {}, version {}".format(
+        logger.debug("gathering license info for bom component {}, version {}".format(
             bom_component['componentName'], bom_component['componentVersionName']))
         for license in bom_component.get('licenses', []):
             for license_info_obj in self._get_license_info(license):
@@ -604,7 +605,7 @@ class HubInstance(object):
         # Using internal API - see https://jira.dc1.lan/browse/HUB-18270: Make snippet API calls for ignoring, confirming snippet matches public
         url =  "{}/v1/releases/{}/file-bom-entries{}".format(self.get_apibase(), hub_release_id)
         url += paramstring
-        logging.debug("GET {}".format(url))
+        logger.debug("GET {}".format(url))
         response = self.execute_get(url)
         jsondata = response.json()
         return jsondata
@@ -613,7 +614,7 @@ class HubInstance(object):
         self._check_version_compatibility()
         url = self.get_link(bom_component, "matched-files")
         paramstring = self.get_limit_paramstring(limit)
-        logging.debug("GET {}".format(url))
+        logger.debug("GET {}".format(url))
         response = self.execute_get(url)
         jsondata = response.json()
         return jsondata
@@ -811,11 +812,11 @@ class HubInstance(object):
         if project:
             version = self.get_version_by_name(project, version_name)
             if version == None:
-                logging.debug("Did not find any project version matching {}".format(version_name))
+                logger.debug("Did not find any project version matching {}".format(version_name))
             else:
                 return version
         else:
-            logging.debug("Did not find a project with name {}".format(project_name))
+            logger.debug("Did not find a project with name {}".format(project_name))
 
     def get_or_create_project_version(self, project_name, version_name, parameters = {}):
         project = self.get_project_by_name(project_name)
@@ -865,11 +866,11 @@ class HubInstance(object):
         if version:
             for k,v in new_settings.items():
                 if k in HubInstance.PROJECT_VERSION_SETTINGS:
-                    logging.debug("updating setting {} in version {} with value {}".format(
+                    logger.debug("updating setting {} in version {} with value {}".format(
                         k, version['versionName'], v))
                     version[k] = v
                 else:
-                    logging.warn("Setting {} is not in the list of project version settings ({})".format(
+                    logger.warn("Setting {} is not in the list of project version settings ({})".format(
                         k, HubInstance.PROJECT_VERSION_SETTINGS))
 
             url = version['_meta']['href']
@@ -877,13 +878,13 @@ class HubInstance(object):
             response = self.execute_put(url, version)
 
             if response.status_code == 200:
-                logging.info("Successfully updated version {} with new settings {}".format(
+                logger.info("Successfully updated version {} with new settings {}".format(
                     version['versionName'], new_settings))
             else:
-                logging.error("Failed to update version {} with new settings {}; status code: {}".format(
+                logger.error("Failed to update version {} with new settings {}; status code: {}".format(
                     version['versionName'], new_settings, response.status_code))
         else:
-            logging.debug("Did not find a matching project-version in project {}, version name {}".format(
+            logger.debug("Did not find a matching project-version in project {}, version name {}".format(
                 project_name, version_name))
 
     def get_version_by_id(self, project_id, version_id, limit=100):
@@ -918,7 +919,7 @@ class HubInstance(object):
     def delete_project_version_by_name(self, project_name, version_name, save_scans=False):
         project = self.get_project_by_name(project_name)
         if project:
-            logging.debug("found project {}".format(project))
+            logger.debug("found project {}".format(project))
             project_versions = self.get_project_versions(
                 project, 
                 parameters={'q':"versionName:{}".format(version_name)}
@@ -927,23 +928,23 @@ class HubInstance(object):
             project_version_codelocations = None
             if 'totalCount' in project_versions and project_versions['totalCount'] == 1:
                 project_version = project_versions['items'][0]
-                logging.debug("found the project version: {}".format(project_version))
+                logger.debug("found the project version: {}".format(project_version))
 
                 delete_scans = not save_scans
-                logging.debug("delete_scans was {}".format(delete_scans))
+                logger.debug("delete_scans was {}".format(delete_scans))
 
                 if delete_scans:
                     self.delete_project_version_codelocations(project_version)
                 else:
-                    logging.debug("Delete scans was false, or we did not find any codelocations (scans) in version {} of project {}".format(version_name, project_name))
+                    logger.debug("Delete scans was false, or we did not find any codelocations (scans) in version {} of project {}".format(version_name, project_name))
                 # TODO: Check if the project will be "empty" once we delete this version and
                 # delete the project accordingly?
-                logging.info("Deleting project-version at: {}".format(project_version['_meta']['href']))
+                logger.info("Deleting project-version at: {}".format(project_version['_meta']['href']))
                 self.execute_delete(project_version['_meta']['href'])
             else:
-                logging.debug("Did not find version with name {} in project {}".format(version_name, project_name))
+                logger.debug("Did not find version with name {} in project {}".format(version_name, project_name))
         else:
-            logging.debug("Did not find project with name {}".format(project_name))
+            logger.debug("Did not find project with name {}".format(project_name))
     
     def delete_project_by_name(self, project_name, save_scans=False):
         project = self.get_project_by_name(project_name)
@@ -951,38 +952,38 @@ class HubInstance(object):
             # get project versions
             project_versions = self.get_project_versions(project)
             versions = project_versions.get('items', [])
-            logging.debug("Retrieved {} versions for project {}".format(len(versions), project_name))
+            logger.debug("Retrieved {} versions for project {}".format(len(versions), project_name))
             
             delete_scans = not save_scans
-            logging.debug("delete_scans was {}".format(delete_scans))
+            logger.debug("delete_scans was {}".format(delete_scans))
                 
             if delete_scans:
                 # delete all code locations associated with each version
                 for version in versions:
-                    logging.debug("Deleting code locations (aka scans) for version {}".format(version['versionName']))
+                    logger.debug("Deleting code locations (aka scans) for version {}".format(version['versionName']))
                     self.delete_project_version_codelocations(version)
                         
             # delete the project itself
             project_url = project['_meta']['href']
-            logging.info("Deleting project {}".format(project_name))
+            logger.info("Deleting project {}".format(project_name))
             self.execute_delete(project_url)
         else:
-            logging.debug("Did not find project with name {}".format(project_name))
+            logger.debug("Did not find project with name {}".format(project_name))
             
     def delete_project_version_codelocations(self, version):
         version_name = version['versionName']
         try:
-            logging.debug("Retrieving code locations (aka scans) for version {}".format(version_name))
+            logger.debug("Retrieving code locations (aka scans) for version {}".format(version_name))
             version_code_locations = self.get_version_codelocations(version)
         except:
-            logging.error("Failed to get codelocations (aka scans) for version {}".format(version_name), exc_info=True)
+            logger.error("Failed to get codelocations (aka scans) for version {}".format(version_name), exc_info=True)
             version_code_locations = []
         else:
             version_code_locations = version_code_locations.get('items', []) if version_code_locations else []
-        logging.debug("Found {} code locations (aka scans) for version {}".format(len(version_code_locations), version_name))
+        logger.debug("Found {} code locations (aka scans) for version {}".format(len(version_code_locations), version_name))
         code_location_urls = [c['_meta']['href'] for c in version_code_locations]
         for code_location_url in code_location_urls:
-            logging.info("Deleting code location at: {}".format(code_location_url))
+            logger.info("Deleting code location at: {}".format(code_location_url))
             self.execute_delete(code_location_url)
 
     def delete_empty_projects(self):
@@ -1059,32 +1060,32 @@ class HubInstance(object):
                     return response
                 else:
                     assignable_groups = [u['name'] for u in assignable_user_groups['items']]
-                    logging.warning("The user group {} was not found in the assignable user groups ({}) for this project {}. Is the group already assigned to this project?".format(
+                    logger.warning("The user group {} was not found in the assignable user groups ({}) for this project {}. Is the group already assigned to this project?".format(
                         user_group_name, assignable_groups, project_name))
             else:
-                logging.warning("This project {} has no assignable user groups".format(project_name))
+                logger.warning("This project {} has no assignable user groups".format(project_name))
         else:
-            logging.warning("Did not find a project by the name {}".format(project_name))
+            logger.warning("Did not find a project by the name {}".format(project_name))
 
     def assign_user_to_project(self, user_name, project_name, project_roles_l):
         pass
 
     def assign_project_application_id(self, project_name, application_id, overwrite=False):
-        logging.debug("Assigning application_id {} to project_name {}, overwrite={}".format(
+        logger.debug("Assigning application_id {} to project_name {}, overwrite={}".format(
             application_id, project_name, overwrite))
 
         existing_application_id, application_id_url = self.get_project_application_id(project_name)
 
         if existing_application_id:
             if overwrite:
-                logging.debug("Found an existing application id {} for project {} and overwrite was True. Updating it to {}".format(
+                logger.debug("Found an existing application id {} for project {} and overwrite was True. Updating it to {}".format(
                     existing_application_id, project_name, application_id))
                 return self.update_project_application_id(project_name, application_id)
             else:
-                logging.debug("Found an existing application id {} for project {} and overwrite was False so not updating it".format(
+                logger.debug("Found an existing application id {} for project {} and overwrite was False so not updating it".format(
                     existing_application_id, project_name))
         else:
-            logging.debug("No application id exists for project {}, assigning {} to it".format(
+            logger.debug("No application id exists for project {}, assigning {} to it".format(
                 project_name, application_id))
             project = self.get_project_by_name(project_name)
             if project:
@@ -1094,9 +1095,9 @@ class HubInstance(object):
                     response = self.execute_post(project_mappings_url, data=post_data)
                     return response
                 else:
-                    logging.warning("Did not find project-mappings URL for project {}".format(project))
+                    logger.warning("Did not find project-mappings URL for project {}".format(project))
             else:
-                logging.warning("Did not find project by name {}".format(project_name))
+                logger.warning("Did not find project by name {}".format(project_name))
 
     def update_project_application_id(self, project_name, new_application_id):
         application_id, application_id_url = self.get_project_application_id(project_name)
@@ -1117,7 +1118,7 @@ class HubInstance(object):
             response = self.execute_put(application_id_url, data=put_data)
             return response
         else:
-            logging.debug("Did not find application id for project name {}".format(project_name))
+            logger.debug("Did not find application id for project name {}".format(project_name))
 
     def delete_application_id(self, project_name):
         application_id, application_id_url = self.get_project_application_id(project_name)
@@ -1134,10 +1135,10 @@ class HubInstance(object):
                     application_id_url = project_mapping['_meta']['href']
 
                     return (application_id, application_id_url)
-            logging.debug("Did not find any project-mappings with 'applicationId' in them")
+            logger.debug("Did not find any project-mappings with 'applicationId' in them")
             return (None, None)
         else:
-            logging.debug("did not find any project-mappings for project {}".format(project_name))
+            logger.debug("did not find any project-mappings for project {}".format(project_name))
             return (None, None)
 
     def get_project_info(self, project_name, link_name):
@@ -1242,10 +1243,10 @@ class HubInstance(object):
                 jsondata['totalCount'] = len(jsondata['items'])
             return jsondata
         elif response.status_code == 403:
-            logging.warning("Failed to retrieve code locations (aka scans) probably due to lack of permissions, status code {}".format(
+            logger.warning("Failed to retrieve code locations (aka scans) probably due to lack of permissions, status code {}".format(
                 response.status_code))
         else:
-            logging.error("Failed to retrieve code locations (aka scans), status code {}".format(
+            logger.error("Failed to retrieve code locations (aka scans), status code {}".format(
                 response.status_code))
 
     def get_codelocation_scan_summaries(self, code_location_id = None, code_location_obj = None, limit=100):
@@ -1422,7 +1423,7 @@ class HubInstance(object):
                 try:
                     response_json = response.json()
                 except json.decoder.JSONDecodeError:
-                    logging.warning('did not receive any json data back')
+                    logger.warning('did not receive any json data back')
                 else:
                     if '_meta' in response_json and 'href' in response_json['_meta']:
                         return response_json['_meta']['href']
